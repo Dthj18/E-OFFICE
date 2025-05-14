@@ -17,7 +17,7 @@ class MyButton extends StatelessWidget {
         ),
         child: const Center(
           child: Text(
-            "Sign In",
+            "Iniciar Sesión",
             style: TextStyle(
               color: Colors.white,
               fontWeight: FontWeight.bold,

@@ -1,6 +1,7 @@
 import 'package:eoffice/Pages/Principal.dart';
 import 'package:flutter/material.dart';
 import 'package:eoffice/Pages/login.dart'; // Importa la segunda pantalla
+import 'package:eoffice/Pages/registro.dart'; // Importa la segunda pantalla
 
 void main() {
   runApp(MyApp());
@@ -16,7 +17,7 @@ class MyApp extends StatelessWidget {
       routes: {
         '/': (context) => MainScreen(),
         '/segunda': (context) => LoginPage(),
-        '/tercera': (context) => Principal(),
+        '/cuarta': (context) => RegisterPage(),
       },
     );
   }
@@ -43,6 +44,13 @@ class MainScreen extends StatelessWidget {
                 Navigator.pushNamed(context, '/tercera');
               },
               child: Text('Ir a la Tercera Pantalla'),
+            ),
+            SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pushNamed(context, '/cuarta');
+              },
+              child: Text('Ir a la cuarta Pantalla'),
             ),
           ],
         ),

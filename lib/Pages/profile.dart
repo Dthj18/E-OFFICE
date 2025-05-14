@@ -1,126 +1,66 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class PerfilPage extends StatelessWidget {
-  const PerfilPage({Key? key}) : super(key: key);
+  final String userName;
+  final String userEmail;
 
-  void _crearModoPersonalizado(BuildContext context) {
-    // Aquí puedes redirigir a un formulario o modal para configurar el modo
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Crear Modo Personalizado'),
-          content: const Text(
-            'Aquí se configurarán dispositivos y preferencias.',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancelar'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                // lógica para guardar
-                Navigator.pop(context);
-              },
-              child: const Text('Guardar'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  void _agregarDispositivo(BuildContext context) {
-    // Aquí puedes redirigir a una nueva página o modal
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Agregar nuevo dispositivo'),
-          content: const Text('Formulario para registrar nuevo dispositivo.'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancelar'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                // lógica para agregar dispositivo
-                Navigator.pop(context);
-              },
-              child: const Text('Agregar'),
-            ),
-          ],
-        );
-      },
-    );
-  }
+  const PerfilPage({Key? key, required this.userName, required this.userEmail})
+    : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Perfil de Usuario'),
-        backgroundColor: Colors.indigo,
+        backgroundColor: Colors.indigo.shade50,
       ),
       body: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
           children: [
-            // Avatar e información
             Row(
               children: [
+                CircleAvatar(
+                  radius: 35,
+                  backgroundColor: Colors.indigo.shade100,
+                  child: Icon(Icons.person, size: 40, color: Colors.indigo),
+                ),
                 const SizedBox(width: 20),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  children: const [
+                  children: [
                     Text(
-                      'Diego Ramírez',
-                      style: TextStyle(
+                      userName,
+                      style: const TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    SizedBox(height: 5),
-                    Text(
-                      'diego@example.com',
-                      style: TextStyle(color: Colors.grey),
-                    ),
+                    const SizedBox(height: 5),
+                    Text(userEmail, style: const TextStyle(color: Colors.grey)),
                   ],
                 ),
               ],
             ),
             const SizedBox(height: 40),
 
-            // Botón crear modo personalizado
             ElevatedButton.icon(
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.indigo,
+                backgroundColor: Colors.redAccent,
                 minimumSize: const Size.fromHeight(50),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
                 ),
               ),
-              icon: const Icon(Icons.settings_suggest),
-              label: const Text('Crear modo personalizado'),
-              onPressed: () => _crearModoPersonalizado(context),
-            ),
+              icon: const Icon(Icons.logout),
+              label: const Text('Cerrar Sesión'),
+              onPressed: () async {
+                final prefs = await SharedPreferences.getInstance();
+                await prefs.clear();
 
-            const SizedBox(height: 20),
-
-            // Botón agregar nuevo dispositivo
-            ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.indigo.shade300,
-                minimumSize: const Size.fromHeight(50),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-              ),
-              icon: const Icon(Icons.add_box),
-              label: const Text('Agregar nuevo dispositivo'),
-              onPressed: () => _agregarDispositivo(context),
+                Navigator.pushReplacementNamed(context, '/segunda');
+              },
             ),
           ],
         ),

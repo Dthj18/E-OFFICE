@@ -1,3 +1,4 @@
+import 'dart:developer';
 import 'package:flutter/material.dart';
 import 'package:mqtt_client/mqtt_client.dart';
 import 'package:mqtt_client/mqtt_server_client.dart';
@@ -11,6 +12,7 @@ class _MusicControlPageState extends State<MusicControlPage> {
   late MqttServerClient client;
   double volumen = 50;
   String cancionActual = 'Desconocida';
+  bool audioEncendido = false;
 
   @override
   void initState() {
@@ -19,7 +21,7 @@ class _MusicControlPageState extends State<MusicControlPage> {
   }
 
   Future<void> _connectToMqtt() async {
-    client = MqttServerClient('192.168.212.151', '');
+    client = MqttServerClient('192.168.137.147', '');
     client.port = 1883;
     client.keepAlivePeriod = 20;
     client.onDisconnected = _onDisconnected;
@@ -34,9 +36,9 @@ class _MusicControlPageState extends State<MusicControlPage> {
 
     try {
       await client.connect();
-      print('Conectado al broker MQTT');
+      log('✅ Conectado al broker MQTT');
 
-      client.subscribe('musica/cancion', MqttQos.atMostOnce);
+      client.subscribe('eoffice/audio/actuador', MqttQos.atMostOnce);
 
       client.updates!.listen((List<MqttReceivedMessage<MqttMessage?>>? c) {
         final recMess = c![0].payload as MqttPublishMessage;
@@ -48,33 +50,64 @@ class _MusicControlPageState extends State<MusicControlPage> {
         });
       });
     } catch (e) {
-      print('Error de conexión: $e');
+      log('❌ Error de conexión: $e');
     }
   }
 
   void _onDisconnected() {
-    print('Desconectado del broker MQTT');
+    log('🔌 Desconectado del broker MQTT');
   }
 
-  void _publishMessage(String topic, String message) {
+  void _publishAction(String accion) {
     final builder = MqttClientPayloadBuilder();
-    builder.addString(message);
-    client.publishMessage(topic, MqttQos.exactlyOnce, builder.payload!);
+    builder.addString('{"accion": "$accion"}');
+    client.publishMessage(
+      'eoffice/audio/actuador',
+      MqttQos.exactlyOnce,
+      builder.payload!,
+    );
   }
 
-  Widget _buildMusicButton(IconData icon, String action) {
-    return SizedBox(
-      width: 80,
-      height: 80,
+  void _publishVolume(int volumen) {
+    final builder = MqttClientPayloadBuilder();
+    builder.addString('{"accion": "ajustar", "volumen": $volumen}');
+    client.publishMessage(
+      'eoffice/audio/actuador',
+      MqttQos.exactlyOnce,
+      builder.payload!,
+    );
+  }
+
+  Widget _buildMusicButton(IconData icon, String accion, String tooltip) {
+    return Tooltip(
+      message: tooltip,
       child: ElevatedButton(
-        onPressed: () => _publishMessage('musica/control', action),
+        onPressed: audioEncendido ? () => _publishAction(accion) : null,
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.indigo.shade700,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(15),
+            borderRadius: BorderRadius.circular(12),
           ),
+          padding: EdgeInsets.all(20),
         ),
-        child: Icon(icon, color: Colors.white, size: 35),
+        child: Icon(icon, size: 28, color: Colors.white),
+      ),
+    );
+  }
+
+  Widget _buildTogglePowerButton() {
+    return ElevatedButton.icon(
+      onPressed: () {
+        setState(() => audioEncendido = !audioEncendido);
+        _publishAction(audioEncendido ? "encender" : "apagar");
+      },
+      icon: Icon(audioEncendido ? Icons.power_settings_new : Icons.power_off),
+      label: Text(audioEncendido ? "Apagar" : "Encender"),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: audioEncendido ? Colors.red : Colors.green,
+        padding: EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+        textStyle: TextStyle(fontSize: 16),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
     );
   }
@@ -82,9 +115,13 @@ class _MusicControlPageState extends State<MusicControlPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Control de Música')),
+      backgroundColor: Colors.indigo.shade50,
+      appBar: AppBar(
+        title: Text('Control de Música'),
+        backgroundColor: Colors.indigo.shade50,
+      ),
       body: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(24),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
@@ -92,54 +129,51 @@ class _MusicControlPageState extends State<MusicControlPage> {
               child: Center(
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    // Slider Vertical
-                    Container(
-                      height: 300,
-                      width: 80,
-                      padding: EdgeInsets.symmetric(horizontal: 8),
-                      child: RotatedBox(
-                        quarterTurns: -1,
-                        child: SliderTheme(
-                          data: SliderTheme.of(context).copyWith(
-                            trackHeight: 12,
-                            thumbShape: RoundSliderThumbShape(
-                              enabledThumbRadius: 12,
-                            ),
-                            thumbColor: Colors.indigo,
-                            activeTrackColor: Colors.indigoAccent,
-                            inactiveTrackColor: Colors.grey.shade300,
-                            overlayColor: Colors.indigo.withOpacity(0.2),
+                    RotatedBox(
+                      quarterTurns: -1,
+                      child: SliderTheme(
+                        data: SliderTheme.of(context).copyWith(
+                          trackHeight: 10,
+                          thumbShape: RoundSliderThumbShape(
+                            enabledThumbRadius: 10,
                           ),
-                          child: Slider(
-                            value: volumen,
-                            min: 0,
-                            max: 100,
-                            onChanged: (newValue) {
-                              setState(() => volumen = newValue);
-                              _publishMessage(
-                                'musica/volumen',
-                                volumen.toInt().toString(),
-                              );
-                            },
-                          ),
+                          thumbColor: Colors.indigo,
+                          activeTrackColor: Colors.indigoAccent,
+                          inactiveTrackColor: Colors.indigo.shade100,
+                          overlayColor: Colors.indigo.withOpacity(0.2),
+                        ),
+                        child: Slider(
+                          value: volumen,
+                          min: 0,
+                          max: 100,
+                          onChanged:
+                              audioEncendido
+                                  ? (value) {
+                                    setState(() => volumen = value);
+                                    _publishVolume(volumen.toInt());
+                                  }
+                                  : null,
                         ),
                       ),
                     ),
-
-                    // Espacio entre slider y botones
-                    SizedBox(width: 30),
-
-                    // Botones grandes
+                    SizedBox(width: 40),
                     Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        _buildMusicButton(Icons.skip_previous, 'anterior'),
-                        SizedBox(height: 30),
-                        _buildMusicButton(Icons.pause, 'pausar'),
-                        SizedBox(height: 30),
-                        _buildMusicButton(Icons.skip_next, 'siguiente'),
+                        _buildMusicButton(
+                          Icons.play_arrow,
+                          'reanudar',
+                          'Reanudar',
+                        ),
+                        SizedBox(height: 20),
+                        _buildMusicButton(Icons.pause, 'pausar', 'Pausar'),
+                        SizedBox(height: 20),
+                        _buildMusicButton(
+                          Icons.skip_next,
+                          'siguiente',
+                          'Siguiente',
+                        ),
                       ],
                     ),
                   ],
@@ -148,14 +182,25 @@ class _MusicControlPageState extends State<MusicControlPage> {
             ),
 
             SizedBox(height: 20),
+
+            _buildTogglePowerButton(),
+
+            SizedBox(height: 20),
+
             Text(
-              'Reproduciendo: $cancionActual',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              'Reproduciendo:\n$cancionActual',
               textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
             ),
           ],
         ),
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    client.disconnect();
+    super.dispose();
   }
 }

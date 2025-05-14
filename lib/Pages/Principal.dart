@@ -5,26 +5,14 @@ import 'package:eoffice/Pages/temperature.dart';
 import 'package:eoffice/Pages/windows.dart';
 import 'package:eoffice/Pages/profile.dart';
 import 'package:flutter/material.dart';
-
-void main() {
-  runApp(MyApp());
-}
-
-class MyApp extends StatelessWidget {
-  const MyApp({Key? key}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Principal',
-      theme: ThemeData(primarySwatch: Colors.indigo),
-      home: const Principal(),
-    );
-  }
-}
+import 'package:shared_preferences/shared_preferences.dart';
 
 class Principal extends StatefulWidget {
-  const Principal({Key? key}) : super(key: key);
+  final String userName;
+  final String userEmail;
+
+  const Principal({Key? key, required this.userName, required this.userEmail})
+    : super(key: key);
 
   @override
   _PrincipalState createState() => _PrincipalState();
@@ -48,14 +36,22 @@ class _PrincipalState extends State<Principal> {
           'E-OFFICE',
           style: TextStyle(fontSize: 18, color: Colors.indigo),
         ),
-        backgroundColor: Colors.indigo.shade100,
+        backgroundColor: Colors.indigo.shade50,
         actions: [
           IconButton(
             icon: const Icon(Icons.account_circle),
-            onPressed: () {
+            onPressed: () async {
+              final prefs = await SharedPreferences.getInstance();
+              final userName = prefs.getString('userName') ?? 'Usuario';
+              final userEmail = prefs.getString('userEmail') ?? 'Sin correo';
+
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (_) => PerfilPage()),
+                MaterialPageRoute(
+                  builder:
+                      (_) =>
+                          PerfilPage(userName: userName, userEmail: userEmail),
+                ),
               );
             },
           ),
@@ -64,16 +60,13 @@ class _PrincipalState extends State<Principal> {
       backgroundColor: Colors.indigo.shade50,
       body: SafeArea(
         child: Container(
-          margin: const EdgeInsets.only(top: 18, left: 24, right: 24),
+          margin: const EdgeInsets.only(top: 18, left: 16, right: 16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SizedBox(height: 20),
-
               _buildSelectorModos(),
-
               const SizedBox(height: 20),
-
               Expanded(
                 child: GridView.count(
                   crossAxisCount: 2,
@@ -83,7 +76,7 @@ class _PrincipalState extends State<Principal> {
                   children: [
                     _cardMenu(
                       title: 'Persianas',
-                      icon: 'assets/images/persianas.png',
+                      icon: 'assets/images/persiana.png',
                       onTap: () {
                         Navigator.push(
                           context,
@@ -95,7 +88,7 @@ class _PrincipalState extends State<Principal> {
                     ),
                     _cardMenu(
                       title: 'Luz',
-                      icon: 'assets/images/lampara.png',
+                      icon: 'assets/images/lamparas.png',
                       onTap: () {
                         Navigator.push(
                           context,
@@ -107,7 +100,7 @@ class _PrincipalState extends State<Principal> {
                     ),
                     _cardMenu(
                       title: 'Mini-split',
-                      icon: 'assets/images/aire-acondicionado.png',
+                      icon: 'assets/images/aire-acondicionados.png',
                       onTap: () {
                         Navigator.push(
                           context,
@@ -119,7 +112,7 @@ class _PrincipalState extends State<Principal> {
                     ),
                     _cardMenu(
                       title: 'Audio',
-                      icon: 'assets/images/altavoz.png',
+                      icon: 'assets/images/bocina.png',
                       onTap: () {
                         Navigator.push(
                           context,
@@ -131,7 +124,7 @@ class _PrincipalState extends State<Principal> {
                     ),
                     _cardMenu(
                       title: 'Ventanas',
-                      icon: 'assets/images/cortinas.png',
+                      icon: 'assets/images/ventana.png',
                       onTap: () {
                         Navigator.push(
                           context,

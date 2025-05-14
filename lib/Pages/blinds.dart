@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:developer';
+
 import 'package:flutter/material.dart';
 import 'package:mqtt_client/mqtt_client.dart';
 import 'package:mqtt_client/mqtt_server_client.dart';
@@ -9,8 +12,11 @@ class PersianaControlPage extends StatefulWidget {
 
 class _PersianaControlPageState extends State<PersianaControlPage> {
   late MqttServerClient client;
-  final PageController _pageController = PageController(viewportFraction: 1);
+  final String broker = '192.168.137.147';
+  final String topicPersianas = 'eoffice/persianas/actuador';
+  bool _conectado = false;
   int _paginaActual = 0;
+  double nivelApertura = 50;
 
   final List<String> persianasDisponibles = [
     'Persiana 1',
@@ -26,11 +32,11 @@ class _PersianaControlPageState extends State<PersianaControlPage> {
   }
 
   Future<void> _connectToMqtt() async {
-    client = MqttServerClient('192.168.212.151', '');
+    client = MqttServerClient(broker, 'flutter_persianas_client');
     client.port = 1883;
     client.keepAlivePeriod = 20;
-    client.onDisconnected = _onDisconnected;
     client.logging(on: false);
+    client.onDisconnected = _onDisconnected;
 
     final connMessage = MqttConnectMessage()
         .withClientIdentifier('flutter_persianas_client')
@@ -41,78 +47,83 @@ class _PersianaControlPageState extends State<PersianaControlPage> {
 
     try {
       await client.connect();
-      print('Conectado al broker MQTT');
+      log('✅ Conectado a MQTT');
+      setState(() => _conectado = true);
     } catch (e) {
-      print('Error de conexión: $e');
+      log('❌ Error al conectar: $e');
     }
   }
 
   void _onDisconnected() {
-    print('Desconectado del broker MQTT');
+    setState(() => _conectado = false);
+    log('🔌 Desconectado del broker MQTT');
   }
 
-  void _publishMessage(String topic, String message) {
+  void _publishMessage(String topic, Map<String, dynamic> message) {
+    if (!_conectado) return;
     final builder = MqttClientPayloadBuilder();
-    builder.addString(message);
+    builder.addString(json.encode(message));
     client.publishMessage(topic, MqttQos.exactlyOnce, builder.payload!);
   }
 
-  Widget _buildControlButton(String label, IconData icon, String action) {
-    return SizedBox(
-      width: 140,
-      height: 60,
-      child: ElevatedButton.icon(
-        onPressed:
-            () => _publishMessage(
-              'persianas/control',
-              '$action:${_paginaActual + 1}',
-            ),
-        icon: Icon(icon, color: Colors.white),
-        label: Text(label, style: TextStyle(color: Colors.white)),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.indigo.shade700,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-        ),
-      ),
+  void _sendCommand(String accion) {
+    final message = {'accion': accion, 'persiana': _paginaActual + 1};
+    _publishMessage(topicPersianas, message);
+  }
+
+  void _publishApertura(double nivel) {
+    final mensaje = {
+      "accion": "ajustar",
+      "persiana": _paginaActual + 1,
+      "nivel": nivel.toInt(),
+    };
+    _publishMessage(topicPersianas, mensaje);
+  }
+
+  Widget _buildControlButton(IconData icon, String action) {
+    return IconButton(
+      onPressed: () => _sendCommand(action),
+      icon: Icon(icon),
+      iconSize: 36,
+      color: Colors.indigo.shade700,
+      tooltip: action.capitalize(),
     );
   }
 
   Widget _buildCarrusel() {
     return SizedBox(
-      height: 180,
+      height: 130,
       child: PageView.builder(
-        controller: _pageController,
         itemCount: persianasDisponibles.length,
-        onPageChanged: (index) {
-          setState(() {
-            _paginaActual = index;
-          });
-        },
+        onPageChanged: (index) => setState(() => _paginaActual = index),
         itemBuilder: (context, index) {
-          return Center(
-            child: Card(
-              elevation: 5,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Container(
-                width: 220,
-                height: 140,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(16),
-                  color: Colors.indigo.shade100,
-                ),
-                child: Text(
-                  persianasDisponibles[index],
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.indigo.shade900,
+          final selected = index == _paginaActual;
+          return AnimatedContainer(
+            duration: Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
+            margin: EdgeInsets.symmetric(
+              horizontal: 12,
+              vertical: selected ? 0 : 10,
+            ),
+            decoration: BoxDecoration(
+              color: selected ? Colors.indigo.shade100 : Colors.indigo.shade50,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                if (selected)
+                  BoxShadow(
+                    color: Colors.indigo.shade200,
+                    blurRadius: 8,
+                    offset: Offset(0, 4),
                   ),
-                ),
+              ],
+            ),
+            alignment: Alignment.center,
+            child: Text(
+              persianasDisponibles[index],
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: Colors.indigo.shade900,
               ),
             ),
           );
@@ -121,36 +132,76 @@ class _PersianaControlPageState extends State<PersianaControlPage> {
     );
   }
 
+  Widget _buildSlider() {
+    return Column(
+      children: [
+        Text(
+          'Apertura: ${nivelApertura.toInt()}%',
+          style: TextStyle(fontSize: 14),
+        ),
+        Slider(
+          value: nivelApertura,
+          min: 0,
+          max: 100,
+          divisions: 20,
+          activeColor: Colors.indigo,
+          label: '${nivelApertura.toInt()}%',
+          onChanged: (newValue) {
+            setState(() => nivelApertura = newValue);
+            _publishApertura(newValue);
+          },
+        ),
+      ],
+    );
+  }
+
+  @override
+  void dispose() {
+    client.disconnect();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Control de Persianas')),
+      backgroundColor: Colors.indigo.shade50,
+      appBar: AppBar(
+        title: Text('Control de Persianas'),
+        backgroundColor: Colors.indigo.shade50,
+      ),
       body: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 30),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Text(
               'Selecciona una persiana',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: Colors.indigo.shade800,
+              ),
             ),
             SizedBox(height: 20),
             _buildCarrusel(),
-            SizedBox(height: 40),
+            Divider(height: 40),
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                _buildControlButton('Subir', Icons.keyboard_arrow_up, 'subir'),
-                _buildControlButton(
-                  'Bajar',
-                  Icons.keyboard_arrow_down,
-                  'bajar',
-                ),
+                _buildControlButton(Icons.keyboard_arrow_up, 'abrir'),
+                SizedBox(width: 40),
+                _buildControlButton(Icons.keyboard_arrow_down, 'cerrar'),
               ],
             ),
+            Divider(height: 40),
+            _buildSlider(),
           ],
         ),
       ),
     );
   }
+}
+
+extension StringExtension on String {
+  String capitalize() => '${this[0].toUpperCase()}${substring(1)}';
 }
