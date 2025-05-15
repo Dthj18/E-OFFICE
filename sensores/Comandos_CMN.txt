@@ -1,0 +1,67 @@
+# Ver datos del sensor de luz
+mosquitto_sub -h 192.168.1.100 -t "eoffice/luz/sensor"
+
+# Encender las luces
+mosquitto_pub -h 192.168.1.100 -t "eoffice/luces/actuador" -m '{"accion": "encender"}'
+
+#Apagar las luces
+mosquitto_pub -h 192.168.1.100 -t "eoffice/luces/actuador" -m '{"accion": "apagar"}'
+
+# Ajustar la luz
+mosquitto_pub -h 192.168.1.100 -t "eoffice/luces/actuador" -m '{"accion": "ajustar", "intensidad": 30}'
+
+____________________________________________________________________
+
+# Ver datos del sensor del aire
+mosquitto_sub -h 192.168.1.100 -t "eoffice/aire/sensor"
+
+# Encender el aire acondicionado
+mosquitto_pub -h 192.168.1.100 -t "eoffice/aire/actuador" -m '{"accion": "encender"}'
+
+# Apagar el aire acondicionado
+mosquitto_pub -h 192.168.1.100 -t "eoffice/aire/actuador" -m '{"accion": "apagar"}'
+
+# Ajustar el aire acondicionado a 22°C
+mosquitto_pub -h 192.168.1.100 -t "eoffice/aire/actuador" -m '{"accion": "ajustar", "temperatura": 22}'
+
+__________________________________________________________________________________
+
+# Abrir persianas completamente
+mosquitto_pub -h 192.168.1.100 -t "eoffice/persianas/actuador" -m '{"accion": "abrir"}'
+
+# Cerrar persianas completamente
+mosquitto_pub -h 192.168.1.100 -t "eoffice/persianas/actuador" -m '{"accion": "cerrar"}'
+
+# Ajustar persianas al 50%
+mosquitto_pub -h 192.168.1.100 -t "eoffice/persianas/actuador" -m '{"accion": "ajustar", "porcentaje": 50}'
+
+______________________________________________________________________________________--
+
+# Abrir ventanas completamente
+mosquitto_pub -h 192.168.1.100 -t "eoffice/ventanas/actuador" -m '{"accion": "abrir"}'
+
+# Cerrar ventanas completamente
+mosquitto_pub -h 192.168.1.100 -t "eoffice/ventanas/actuador" -m '{"accion": "cerrar"}'
+
+# Ajustar ventanas al 30%
+mosquitto_pub -h 192.168.1.100 -t "eoffice/ventanas/actuador" -m '{"accion": "ajustar", "porcentaje": 30}'
+
+____________________________________________________________________________________________
+
+
+# Encender el sistema de audio
+mosquitto_pub -h 192.168.1.100 -t "eoffice/audio/actuador" -m '{"accion": "encender"}'
+
+# Apagar el sistema de audio
+mosquitto_pub -h 192.168.1.100 -t "eoffice/audio/actuador" -m '{"accion": "apagar"}'
+
+# Ajustar volumen del audio a 75%
+mosquitto_pub -h 192.168.1.100 -t "eoffice/audio/actuador" -m '{"accion": "ajustar", "volumen": 75}'
+
+________________________________________________________________________________________________________
+
+# Ver datos del sensor de ruido
+mosquitto_sub -h 192.168.1.100 -t "eoffice/ruido/sensor"
+
+# Ver datos del sensor de temperatura
+mosquitto_sub -h 192.168.1.100 -t "eoffice/temperatura/sensor"
