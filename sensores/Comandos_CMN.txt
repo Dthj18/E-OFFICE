@@ -65,3 +65,16 @@ mosquitto_sub -h 192.168.1.100 -t "eoffice/ruido/sensor"
 
 # Ver datos del sensor de temperatura
 mosquitto_sub -h 192.168.1.100 -t "eoffice/temperatura/sensor"
+
+
+
+
+comandos que uso para probar el modo AUTOMATICO:
+
+perianas: mosquitto_pub -h 192.168.79.151 -t eoffice/persianas/actuador -m '{"accion":"abrir", "persiana":1}'
+
+luces: mosquitto_pub -h 192.168.79.151 -t eoffice/luces/actuador -m '{"accion":"encender", "intensidad":100}'
+
+cambiar a modo automatico: curl -X POST http://localhost:3000/modo -H "Content-Type: application/json" -d '{"automatico": true}'
+
+modo manual: curl -X POST http://localhost:3000/modo -H "Content-Type: application/json" -d '{"automatico": false}'

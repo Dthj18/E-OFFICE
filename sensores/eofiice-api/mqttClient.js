@@ -1,9 +1,10 @@
-// mqttClient.js
 const mqtt = require("mqtt");
-const { registrarSensor, registrarAccion } = require("./db");
+const {
+  registrarSensor,
+  registrarAccion
+} = require("./db");
 
-const MQTT_BROKER = "mqtt://127.0.0.1";
-
+const MQTT_BROKER = "mqtt://192.168.79.151";
 const client = mqtt.connect(MQTT_BROKER);
 
 // Tópicos de sensores
@@ -16,6 +17,18 @@ const TOPIC_ACTUADOR_AIRE = "eoffice/aire/actuador";
 const TOPIC_ACTUADOR_LUCES = "eoffice/luces/actuador";
 const TOPIC_ACTUADOR_PERSIANAS = "eoffice/persianas/actuador";
 const TOPIC_ACTUADOR_AUDIO = "eoffice/audio/actuador";
+
+let modoAutomatico = true;
+
+function setModoAutomatico(valor) {
+  modoAutomatico = valor;
+  console.log(`🔃 Modo actualizado: ${modoAutomatico ? "automático" : "manual"}`);
+  registrarAccion("sistema", `cambio de modo a ${modoAutomatico ? "automático" : "manual"}`);
+}
+
+function getModoAutomatico() {
+  return modoAutomatico;
+}
 
 client.on("connect", () => {
   console.log("🔌 Conectado al broker MQTT");
@@ -34,7 +47,6 @@ client.on("connect", () => {
 client.on("message", async (topic, message) => {
   const payload = JSON.parse(message.toString());
 
-  // Sensores
   if (topic === TOPIC_SENSOR_TEMP && payload.temperatura !== undefined) {
     console.log(`🌡️ Temperatura: ${payload.temperatura}°C`);
     await registrarSensor("temperatura", payload.temperatura);
@@ -50,7 +62,6 @@ client.on("message", async (topic, message) => {
     await registrarSensor("ruido", payload.ruido);
   }
 
-  // Acciones de actuadores
   if (topic === TOPIC_ACTUADOR_AIRE && payload.accion) {
     console.log(`💨 Acción aire: ${payload.accion}`);
     await registrarAccion("aire", payload.accion);
@@ -71,3 +82,9 @@ client.on("message", async (topic, message) => {
     await registrarAccion("audio", payload.accion);
   }
 });
+
+module.exports = {
+  client,
+  setModoAutomatico,
+  getModoAutomatico
+};

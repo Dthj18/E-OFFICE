@@ -1,174 +1,105 @@
- /*const express = require("express");
-const mqtt = require("mqtt");
-
-const app = express();
-const PORT = 3000;
-
-// 📡 Conexión al broker
-const MQTT_BROKER = "mqtt://127.0.0.1";
-
-// 🧭 Tópicos sensores
-const TOPIC_SENSOR_TEMP = "eoffice/temperatura/sensor";
-const TOPIC_SENSOR_LUZ = "eoffice/luz/sensor";
-const TOPIC_SENSOR_RUIDO = "eoffice/ruido/sensor";
-
-// 🧭 Tópicos triggers
-const TOPIC_TRIGGER_ENCENDER_AIRE = "eoffice/aire/trigger";
-const TOPIC_TRIGGER_APAGAR_AIRE = "eoffice/aire/trigger_apagar";
-const TOPIC_TRIGGER_ABRIR_PERSIANAS = "eoffice/persianas/trigger_abrir";
-const TOPIC_TRIGGER_CERRAR_PERSIANAS = "eoffice/persianas/trigger_cerrar";
-const TOPIC_TRIGGER_ENCENDER_LUCES = "eoffice/luces/trigger_encender";
-const TOPIC_TRIGGER_APAGAR_LUCES = "eoffice/luces/trigger_apagar";
-const TOPIC_TRIGGER_SUBIR_VOLUMEN = "eoffice/audio/trigger_subir_volumen";
-const TOPIC_TRIGGER_BAJAR_VOLUMEN = "eoffice/audio/trigger_bajar_volumen";
-
-// 🧭 Tópicos actuadores
-const TOPIC_ACTUADOR_AIRE = "eoffice/aire/actuador";
-const TOPIC_ACTUADOR_PERSIANAS = "eoffice/persianas/actuador";
-const TOPIC_ACTUADOR_LUCES = "eoffice/luces/actuador";
-const TOPIC_ACTUADOR_AUDIO = "eoffice/audio/actuador";
-
-// 🔘 Estado de los subsistemas
-const estadoSubsistemas = {
-  aire: { encendido: false },
-  persianas: { abiertas: true },
-  luces: { encendidas: false },
-  audio: { encendido: false }
-};
-
-// 🔌 Conexión MQTT
-const client = mqtt.connect(MQTT_BROKER);
-
-client.on("connect", () => {
-  console.log("🔌 Conectado al broker MQTT");
-
-  client.subscribe([
-    TOPIC_SENSOR_TEMP,
-    TOPIC_SENSOR_LUZ,
-    TOPIC_SENSOR_RUIDO,
-    TOPIC_TRIGGER_ENCENDER_AIRE,
-    TOPIC_TRIGGER_APAGAR_AIRE,
-    TOPIC_TRIGGER_ABRIR_PERSIANAS,
-    TOPIC_TRIGGER_CERRAR_PERSIANAS,
-    TOPIC_TRIGGER_ENCENDER_LUCES,
-    TOPIC_TRIGGER_APAGAR_LUCES,
-    TOPIC_TRIGGER_SUBIR_VOLUMEN,
-    TOPIC_TRIGGER_BAJAR_VOLUMEN
-  ]);
-});
-
-client.on("message", (topic, message) => {
-  const payload = JSON.parse(message.toString());
-
-  // 🌡️ Mostrar datos sensores
-  if (topic === TOPIC_SENSOR_TEMP && payload.temperatura !== undefined) {
-    console.log(`🌡️ Temperatura: ${payload.temperatura}°C`);
-  }
-  if (topic === TOPIC_SENSOR_LUZ && payload.lux !== undefined) {
-    console.log(`🔆 Luz: ${payload.lux} lux`);
-  }
-  if (topic === TOPIC_SENSOR_RUIDO && payload.ruido !== undefined) {
-    console.log(`🔊 Ruido: ${payload.ruido} dB`);
-  }
-
-  // 🚨 Triggers de aire
-  if (topic === TOPIC_TRIGGER_ENCENDER_AIRE) {
-    if (!estadoSubsistemas.aire.encendido) {
-      estadoSubsistemas.aire.encendido = true;
-      console.log("🚦 API decide: encender aire");
-      client.publish(TOPIC_ACTUADOR_AIRE, JSON.stringify({ accion: "encender" }));
-    } else {
-      console.log("⛔ Aire ya encendido. Ignorando.");
-    }
-  }
-  if (topic === TOPIC_TRIGGER_APAGAR_AIRE) {
-    if (estadoSubsistemas.aire.encendido) {
-      estadoSubsistemas.aire.encendido = false;
-      console.log("🚦 API decide: apagar aire");
-      client.publish(TOPIC_ACTUADOR_AIRE, JSON.stringify({ accion: "apagar" }));
-    } else {
-      console.log("⛔ Aire ya apagado. Ignorando.");
-    }
-  }
-
-  // 🪟 Triggers de persianas
-  if (topic === TOPIC_TRIGGER_ABRIR_PERSIANAS) {
-    if (!estadoSubsistemas.persianas.abiertas) {
-      estadoSubsistemas.persianas.abiertas = true;
-      console.log("🪟 API decide: abrir persianas");
-      client.publish(TOPIC_ACTUADOR_PERSIANAS, JSON.stringify({ accion: "abrir" }));
-    } else {
-      console.log("⛔ Persianas ya abiertas. Ignorando.");
-    }
-  }
-  if (topic === TOPIC_TRIGGER_CERRAR_PERSIANAS) {
-    if (estadoSubsistemas.persianas.abiertas) {
-      estadoSubsistemas.persianas.abiertas = false;
-      console.log("🪟 API decide: cerrar persianas");
-      client.publish(TOPIC_ACTUADOR_PERSIANAS, JSON.stringify({ accion: "cerrar" }));
-    } else {
-      console.log("⛔ Persianas ya cerradas. Ignorando.");
-    }
-  }
-
-  // 💡 Triggers de luces
-  if (topic === TOPIC_TRIGGER_ENCENDER_LUCES) {
-    if (!estadoSubsistemas.luces.encendidas) {
-      estadoSubsistemas.luces.encendidas = true;
-      console.log("💡 API decide: encender luces");
-      client.publish(TOPIC_ACTUADOR_LUCES, JSON.stringify({ accion: "encender" }));
-    } else {
-      console.log("⛔ Luces ya encendidas. Ignorando.");
-    }
-  }
-  if (topic === TOPIC_TRIGGER_APAGAR_LUCES) {
-    if (estadoSubsistemas.luces.encendidas) {
-      estadoSubsistemas.luces.encendidas = false;
-      console.log("💡 API decide: apagar luces");
-      client.publish(TOPIC_ACTUADOR_LUCES, JSON.stringify({ accion: "apagar" }));
-    } else {
-      console.log("⛔ Luces ya apagadas. Ignorando.");
-    }
-  }
-
-  // 🎶 Triggers de audio
-  if (topic === TOPIC_TRIGGER_SUBIR_VOLUMEN) {
-    if (estadoSubsistemas.audio.encendido) {
-      console.log("🎶 API decide: subir volumen");
-      client.publish(TOPIC_ACTUADOR_AUDIO, JSON.stringify({ accion: "subir_volumen" }));
-    } else {
-      console.log("⛔ Audio apagado. No se puede subir volumen.");
-    }
-  }
-  if (topic === TOPIC_TRIGGER_BAJAR_VOLUMEN) {
-    if (estadoSubsistemas.audio.encendido) {
-      console.log("🎶 API decide: bajar volumen");
-      client.publish(TOPIC_ACTUADOR_AUDIO, JSON.stringify({ accion: "bajar_volumen" }));
-    } else {
-      console.log("⛔ Audio apagado. No se puede bajar volumen.");
-    }
-  }
-});
-
-app.get("/", (req, res) => {
-  res.send("✅ API E-Office funcionando");
-});
-
-app.listen(PORT, () => {
-  console.log(`🚀 API corriendo en http://localhost:${PORT}`);
-});
-
-*/
-
-// index.js
 const express = require("express");
 const app = express();
 const PORT = 3000;
 
-require("./mqttClient"); // Inicializa conexión MQTT
+const { client, getModoAutomatico, setModoAutomatico } = require("./mqttClient");
+const { registrarEventoUsuario } = require("./db");
 
+app.use(express.json());
+
+const estadoSubsistemas = {
+  aire: { encendido: false },
+  persianas: { abiertas: true },
+  luces: { encendidas: false },
+  audio: { encendido: false },
+};
+
+client.on("message", (topic, message) => {
+  const payload = JSON.parse(message.toString());
+
+  const esTrigger = topic.includes("trigger");
+  if (!getModoAutomatico() && esTrigger) {
+    console.log("⚠️ Modo manual: ignorando trigger automático");
+    return;
+  }
+
+  // Aire acondicionado
+  if (topic === "eoffice/aire/trigger" && !estadoSubsistemas.aire.encendido) {
+    estadoSubsistemas.aire.encendido = true;
+    console.log("🚦 Encender aire");
+    client.publish("eoffice/aire/actuador", JSON.stringify({ accion: "encender" }));
+  }
+
+  if (topic === "eoffice/aire/trigger_apagar" && estadoSubsistemas.aire.encendido) {
+    estadoSubsistemas.aire.encendido = false;
+    console.log("🚦 Apagar aire");
+    client.publish("eoffice/aire/actuador", JSON.stringify({ accion: "apagar" }));
+  }
+
+  // Persianas
+  if (topic === "eoffice/persianas/trigger_abrir" && !estadoSubsistemas.persianas.abiertas) {
+    estadoSubsistemas.persianas.abiertas = true;
+    console.log("🪟 Abrir persianas");
+    client.publish("eoffice/persianas/actuador", JSON.stringify({ accion: "abrir" }));
+  }
+
+  if (topic === "eoffice/persianas/trigger_cerrar" && estadoSubsistemas.persianas.abiertas) {
+    estadoSubsistemas.persianas.abiertas = false;
+    console.log("🪟 Cerrar persianas");
+    client.publish("eoffice/persianas/actuador", JSON.stringify({ accion: "cerrar" }));
+  }
+
+  // Luces
+  if (topic === "eoffice/luces/trigger_encender" && !estadoSubsistemas.luces.encendidas) {
+    estadoSubsistemas.luces.encendidas = true;
+    console.log("💡 Encender luces");
+    client.publish("eoffice/luces/actuador", JSON.stringify({ accion: "encender" }));
+  }
+
+  if (topic === "eoffice/luces/trigger_apagar" && estadoSubsistemas.luces.encendidas) {
+    estadoSubsistemas.luces.encendidas = false;
+    console.log("💡 Apagar luces");
+    client.publish("eoffice/luces/actuador", JSON.stringify({ accion: "apagar" }));
+  }
+
+  // Audio
+  if (topic === "eoffice/audio/trigger_subir_volumen" && estadoSubsistemas.audio.encendido) {
+    console.log("🎶 Subir volumen");
+    client.publish("eoffice/audio/actuador", JSON.stringify({ accion: "subir_volumen" }));
+  }
+
+  if (topic === "eoffice/audio/trigger_bajar_volumen" && estadoSubsistemas.audio.encendido) {
+    console.log("🎶 Bajar volumen");
+    client.publish("eoffice/audio/actuador", JSON.stringify({ accion: "bajar_volumen" }));
+  }
+});
+
+// Endpoints REST
 app.get("/", (req, res) => {
   res.send("✅ API E-Office funcionando");
+});
+
+app.get("/modo", (req, res) => {
+  res.json({ modo: getModoAutomatico() ? "automático" : "manual" });
+});
+
+app.post("/modo", async (req, res) => {
+  const { automatico } = req.body;
+  if (typeof automatico !== "boolean") {
+    return res.status(400).json({ error: "Debe enviar un valor booleano" });
+  }
+  setModoAutomatico(automatico);
+  res.json({ mensaje: `Modo cambiado a ${automatico ? "automático" : "manual"}` });
+});
+
+// Nuevo endpoint para registrar acciones manuales del usuario desde frontend
+app.post("/accion", async (req, res) => {
+  const { accion } = req.body;
+  if (typeof accion !== "string" || !accion.trim()) {
+    return res.status(400).json({ error: "Debe enviar una acción válida (texto)" });
+  }
+  await registrarEventoUsuario(accion);
+  res.json({ mensaje: `Acción registrada: ${accion}` });
 });
 
 app.listen(PORT, () => {

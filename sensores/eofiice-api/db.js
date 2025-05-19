@@ -1,29 +1,51 @@
-// db.js
-const { Pool } = require('pg');
+const { Pool } = require("pg");
+
 const pool = new Pool({
-  user: 'axel',
-  host: 'localhost',
-  database: 'eoffice',
-  password: 'axelalv1029',
+  user: "axel",
+  host: "localhost",
+  database: "eoffice",
+  password: "axelalv1029",
   port: 5432,
 });
 
-// Función para guardar acción en la base de datos
 async function registrarAccion(subsistema, accion) {
-  const query = `
-    INSERT INTO registro_acciones (subsistema, accion, timestamp)
-    VALUES ($1, $2, $3)
-  `;
-  await pool.query(query, [subsistema, accion, new Date()]);
+  try {
+    const query = `
+      INSERT INTO registro_acciones (subsistema, accion, timestamp)
+      VALUES ($1, $2, $3)
+    `;
+    await pool.query(query, [subsistema, accion, new Date()]);
+  } catch (error) {
+    console.error("❌ Error al registrar acción:", error);
+  }
 }
 
-// Función para guardar lectura del sensor
 async function registrarSensor(tipo, valor) {
-  const query = `
-    INSERT INTO registros_sensores (tipo, valor, timestamp)
-    VALUES ($1, $2, $3)
-  `;
-  await pool.query(query, [tipo, valor, new Date()]);
+  try {
+    const query = `
+      INSERT INTO registros_sensores (tipo, valor, timestamp)
+      VALUES ($1, $2, $3)
+    `;
+    await pool.query(query, [tipo, valor, new Date()]);
+  } catch (error) {
+    console.error("❌ Error al registrar sensor:", error);
+  }
 }
 
-module.exports = { registrarAccion, registrarSensor };
+async function registrarEventoUsuario(evento) {
+  try {
+    const query = `
+      INSERT INTO registro_acciones (subsistema, accion, timestamp)
+      VALUES ('frontend', $1, $2)
+    `;
+    await pool.query(query, [evento, new Date()]);
+  } catch (error) {
+    console.error("❌ Error al registrar evento de usuario:", error);
+  }
+}
+
+module.exports = {
+  registrarAccion,
+  registrarSensor,
+  registrarEventoUsuario,
+};

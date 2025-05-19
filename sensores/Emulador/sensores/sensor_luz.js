@@ -1,5 +1,5 @@
 const mqtt = require("mqtt");
-const BROKER_IP = "127.0.0.1";
+const BROKER_IP = "192.168.79.151";
 
 const client = mqtt.connect(`mqtt://${BROKER_IP}:1883`);
 
@@ -13,9 +13,8 @@ let intensidadLuces = 100;
 
 function calcularLuzNatural() {
     const totalApertura = Object.values(persianas).reduce((acc, val) => acc + val, 0);
-    const porcentajeTotal = totalApertura / (4 * 100); // 0.0 a 1.0
-    const lux = porcentajeTotal * 400;
-    return lux + (Math.random() * 10 - 5); // con leve variación
+    const lux = (totalApertura / 100) * 150; // cada persiana 100% = 150 lux
+    return lux + (Math.random() * 10 - 5); // leve variación
 }
 
 function calcularLuzArtificial() {
