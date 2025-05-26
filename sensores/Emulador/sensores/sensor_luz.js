@@ -1,5 +1,5 @@
 const mqtt = require("mqtt");
-const BROKER_IP = "192.168.79.151";
+const BROKER_IP = "127.0.0.1";
 
 const client = mqtt.connect(`mqtt://${BROKER_IP}:1883`);
 

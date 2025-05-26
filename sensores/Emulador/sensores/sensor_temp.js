@@ -4,58 +4,77 @@ const BROKER_IP = "127.0.0.1";
 const client = mqtt.connect(`mqtt://${BROKER_IP}:1883`);
 
 const TOPIC_SENSOR = "eoffice/temperatura/sensor";
-const TOPIC_AIRE = "eoffice/aire/actuador";
 const TOPIC_ESTADO_AIRE = "eoffice/aire/estado";
+const TOPIC_AJUSTAR_TEMP = "eoffice/temperatura/ajustar";
 
-let temperaturaActual = Math.random() * (35 - 25) + 25;
-let temperaturaObjetivo = temperaturaActual;
+let temperaturaAmbiente = 26.5;
+let temperaturaObjetivo = null;
 let aireEncendido = false;
 
 function actualizarTemperatura() {
-    if (aireEncendido) {
-        if (temperaturaActual > temperaturaObjetivo) {
-            temperaturaActual -= Math.random() * 0.5;
-        } else if (temperaturaActual < temperaturaObjetivo) {
-            temperaturaActual += Math.random() * 0.5;
-        }
+    let variacionNatural = (Math.random() * 0.2) - 0.1;
+
+    if (aireEncendido && temperaturaObjetivo !== null) {
+        const diferencia = temperaturaObjetivo - temperaturaAmbiente;
+        const enfriamiento = Math.sign(diferencia) * Math.min(0.4, Math.abs(diferencia));
+        temperaturaAmbiente += enfriamiento + variacionNatural;
     } else {
-        temperaturaActual += Math.random() * 0.4 - 0.2;
+        if (temperaturaAmbiente < 17) {
+            const subida = 0.2 + Math.random() * 0.2;
+            temperaturaAmbiente += subida + variacionNatural;
+        } else {
+            temperaturaAmbiente += variacionNatural;
+        }
     }
 
-    temperaturaActual = Math.max(15, Math.min(35, temperaturaActual));
+    temperaturaAmbiente = Math.max(10, Math.min(40, temperaturaAmbiente));
 }
 
 client.on("connect", () => {
-    console.log("📡 Conectado a EMQX (Sensor de Temperatura)");
-    client.subscribe(TOPIC_AIRE);
+    console.log("📡 Sensor de temperatura conectado a EMQX");
+    client.subscribe(TOPIC_ESTADO_AIRE);
+    client.subscribe(TOPIC_AJUSTAR_TEMP);
 
     setInterval(() => {
         actualizarTemperatura();
-
         const tempData = {
-            temperatura: temperaturaActual.toFixed(2)
+            temperatura: parseFloat(temperaturaAmbiente.toFixed(2))
         };
 
-        console.log(`🌡️ Enviando temperatura: ${tempData.temperatura}°C`);
+        console.log(`🌡️ Temperatura actual: ${tempData.temperatura}°C`);
         client.publish(TOPIC_SENSOR, JSON.stringify(tempData));
     }, 4000);
 });
 
 client.on("message", (topic, message) => {
-    const data = JSON.parse(message.toString());
+    if (topic === TOPIC_ESTADO_AIRE) {
+        const data = JSON.parse(message.toString());
 
-    if (data.accion === "encender") {
-        aireEncendido = true;
-        temperaturaObjetivo = Math.max(15, temperaturaActual - 4); // Baja 4°C al encender
-        console.log("❄️ Aire acondicionado encendido.");
-        console.log(`🎯 Temperatura objetivo ajustada automáticamente a ${temperaturaObjetivo.toFixed(2)}°C`);
-    } else if (data.accion === "apagar") {
-        aireEncendido = false;
-        temperaturaObjetivo = Math.min(35, temperaturaActual + 4); // Sube 4°C al apagar
-        console.log("🔴 Aire acondicionado apagado.");
-        console.log(`🎯 Temperatura ajustada a ${temperaturaObjetivo.toFixed(2)}°C`);
-    } else if (data.accion === "ajustar" && data.temperatura !== undefined) {
-        temperaturaObjetivo = parseFloat(data.temperatura);
-        console.log(`🌡️ Ajustando temperatura a ${temperaturaObjetivo}°C.`);
+        if (data.estado === "encendido") {
+            aireEncendido = true;
+            temperaturaObjetivo = parseFloat(data.temperatura);
+            temperaturaAmbiente = temperaturaAmbiente - 3;
+            console.log(`❄️ Aire encendido. Temperatura objetivo: ${temperaturaObjetivo}°C. Temperatura ambiente ajustada a: ${temperaturaAmbiente.toFixed(2)}°C`);
+        } else if (data.estado === "apagado") {
+            aireEncendido = false;
+            temperaturaAmbiente = temperaturaAmbiente + 3;
+            temperaturaObjetivo = null;
+            console.log(`🔴 Aire apagado. Temperatura ambiente ajustada a: ${temperaturaAmbiente.toFixed(2)}°C`);
+        } else {
+            console.log(`⚠️ Estado del aire desconocido o sin acción: ${JSON.stringify(data)}`);
+        }
+
+    } else if (topic === TOPIC_AJUSTAR_TEMP) {
+        try {
+            const payload = JSON.parse(message.toString());
+            if (payload.temperatura !== undefined) {
+                temperaturaAmbiente = parseFloat(payload.temperatura);
+                console.log(`✏️ Temperatura ambiente ajustada manualmente a: ${temperaturaAmbiente}°C`);
+            } else {
+                console.log("⚠️ Mensaje para ajustar temperatura sin propiedad 'temperatura'");
+            }
+        } catch (err) {
+            console.error("⚠️ Error al parsear mensaje para ajustar temperatura:", err.message);
+        }
     }
 });

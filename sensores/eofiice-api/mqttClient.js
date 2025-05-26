@@ -1,33 +1,40 @@
 const mqtt = require("mqtt");
-const {
-  registrarSensor,
-  registrarAccion
-} = require("./db");
+const { registrarSensor, registrarAccion } = require("./db");
 
-const MQTT_BROKER = "mqtt://192.168.79.151";
+const MQTT_BROKER = "mqtt://127.0.0.1";
 const client = mqtt.connect(MQTT_BROKER);
 
-// Tópicos de sensores
 const TOPIC_SENSOR_TEMP = "eoffice/temperatura/sensor";
 const TOPIC_SENSOR_LUZ = "eoffice/luz/sensor";
 const TOPIC_SENSOR_RUIDO = "eoffice/ruido/sensor";
 
-// Tópicos de actuadores
 const TOPIC_ACTUADOR_AIRE = "eoffice/aire/actuador";
 const TOPIC_ACTUADOR_LUCES = "eoffice/luces/actuador";
 const TOPIC_ACTUADOR_PERSIANAS = "eoffice/persianas/actuador";
 const TOPIC_ACTUADOR_AUDIO = "eoffice/audio/actuador";
+const TOPIC_ACTUADOR_VENTANAS = "eoffice/ventanas/actuador";
 
-let modoAutomatico = true;
+const TOPIC_MODO = "eoffice/modo"; 
 
-function setModoAutomatico(valor) {
-  modoAutomatico = valor;
-  console.log(`🔃 Modo actualizado: ${modoAutomatico ? "automático" : "manual"}`);
-  registrarAccion("sistema", `cambio de modo a ${modoAutomatico ? "automático" : "manual"}`);
+let modoActual = "manual";
+
+function setModo(valor) {
+  const nuevoModo = valor.toLowerCase();
+  if (modoActual !== nuevoModo) {
+    modoActual = nuevoModo;
+    console.log(`🔃 Modo actualizado: ${nuevoModo}`);
+    registrarAccion("sistema", `cambio de modo a ${nuevoModo}`);
+
+    client.publish(TOPIC_MODO, nuevoModo, { qos: 1, retain: true });
+  }
 }
 
-function getModoAutomatico() {
-  return modoAutomatico;
+function getModo() {
+  return modoActual;
+}
+
+function esModoAutomatico() {
+  return modoActual === "automatico";
 }
 
 client.on("connect", () => {
@@ -40,51 +47,94 @@ client.on("connect", () => {
     TOPIC_ACTUADOR_AIRE,
     TOPIC_ACTUADOR_LUCES,
     TOPIC_ACTUADOR_PERSIANAS,
-    TOPIC_ACTUADOR_AUDIO
+    TOPIC_ACTUADOR_AUDIO,
+    TOPIC_ACTUADOR_VENTANAS,
+    TOPIC_MODO 
   ]);
+
+  client.publish(TOPIC_MODO, modoActual, { qos: 1, retain: true });
 });
 
 client.on("message", async (topic, message) => {
-  const payload = JSON.parse(message.toString());
+  try {
+    const payloadStr = message.toString();
 
-  if (topic === TOPIC_SENSOR_TEMP && payload.temperatura !== undefined) {
-    console.log(`🌡️ Temperatura: ${payload.temperatura}°C`);
-    await registrarSensor("temperatura", payload.temperatura);
-  }
+    const payload = topic === TOPIC_MODO ? null : JSON.parse(payloadStr);
 
-  if (topic === TOPIC_SENSOR_LUZ && payload.lux !== undefined) {
-    console.log(`🔆 Luz: ${payload.lux} lux`);
-    await registrarSensor("luz", payload.lux);
-  }
+    switch (topic) {
+      case TOPIC_SENSOR_TEMP:
+        if (payload.temperatura !== undefined) {
+          console.log(`🌡️ Temperatura: ${payload.temperatura}°C`);
+          await registrarSensor("temperatura", payload.temperatura);
+        }
+        break;
 
-  if (topic === TOPIC_SENSOR_RUIDO && payload.ruido !== undefined) {
-    console.log(`🔊 Ruido: ${payload.ruido} dB`);
-    await registrarSensor("ruido", payload.ruido);
-  }
+      case TOPIC_SENSOR_LUZ:
+        if (payload.lux !== undefined) {
+          console.log(`🔆 Luz: ${payload.lux} lux`);
+          await registrarSensor("luz", payload.lux);
+        }
+        break;
 
-  if (topic === TOPIC_ACTUADOR_AIRE && payload.accion) {
-    console.log(`💨 Acción aire: ${payload.accion}`);
-    await registrarAccion("aire", payload.accion);
-  }
+      case TOPIC_SENSOR_RUIDO:
+        if (payload.ruido !== undefined) {
+          console.log(`🔊 Ruido: ${payload.ruido} dB`);
+          await registrarSensor("ruido", payload.ruido);
+        }
+        break;
 
-  if (topic === TOPIC_ACTUADOR_LUCES && payload.accion) {
-    console.log(`💡 Acción luces: ${payload.accion}`);
-    await registrarAccion("luces", payload.accion);
-  }
+      case TOPIC_ACTUADOR_AIRE:
+        if (payload.accion) {
+          console.log(`💨 Acción aire: ${payload.accion}`);
+          await registrarAccion("aire", payload.accion);
+        }
+        break;
 
-  if (topic === TOPIC_ACTUADOR_PERSIANAS && payload.accion) {
-    console.log(`🪟 Acción persianas: ${payload.accion}`);
-    await registrarAccion("persianas", payload.accion);
-  }
+      case TOPIC_ACTUADOR_LUCES:
+        if (payload.accion) {
+          console.log(`💡 Acción luces: ${payload.accion}`);
+          await registrarAccion("luces", payload.accion);
+        }
+        break;
 
-  if (topic === TOPIC_ACTUADOR_AUDIO && payload.accion) {
-    console.log(`🔊 Acción audio: ${payload.accion}`);
-    await registrarAccion("audio", payload.accion);
+      case TOPIC_ACTUADOR_PERSIANAS:
+        if (payload.accion) {
+          console.log(`🪟 Acción persianas: ${payload.accion}`);
+          await registrarAccion("persianas", payload.accion);
+        }
+        break;
+
+      case TOPIC_ACTUADOR_AUDIO:
+        if (payload.accion) {
+          console.log(`🔊 Acción audio: ${payload.accion}`);
+          await registrarAccion("audio", payload.accion);
+        }
+        break;
+
+      case TOPIC_ACTUADOR_VENTANAS:
+        if (payload.accion) {
+          console.log(`🪟 Acción ventanas: ${payload.accion}`);
+          await registrarAccion("ventanas", payload.accion);
+        }
+        break;
+
+      case TOPIC_MODO:
+        const nuevoModo = payloadStr.toLowerCase();
+        if (modoActual !== nuevoModo) {
+          modoActual = nuevoModo;
+          console.log(`🎛️ Modo cambiado externamente a: ${nuevoModo}`);
+          await registrarAccion("sistema", `modo actualizado a ${nuevoModo}`);
+        }
+        break;
+    }
+  } catch (error) {
+    console.error("Error procesando mensaje MQTT:", error);
   }
 });
 
 module.exports = {
   client,
-  setModoAutomatico,
-  getModoAutomatico
+  setModo,
+  getModo,
+  esModoAutomatico
 };

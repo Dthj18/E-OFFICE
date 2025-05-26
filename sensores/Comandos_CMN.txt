@@ -71,10 +71,40 @@ mosquitto_sub -h 192.168.1.100 -t "eoffice/temperatura/sensor"
 
 comandos que uso para probar el modo AUTOMATICO:
 
-perianas: mosquitto_pub -h 192.168.79.151 -t eoffice/persianas/actuador -m '{"accion":"abrir", "persiana":1}'
+perianas: mosquitto_pub -h 127.0.0.1 -t eoffice/persianas/actuador -m '{"accion":"abrir", "persiana":1}'
 
 luces: mosquitto_pub -h 192.168.79.151 -t eoffice/luces/actuador -m '{"accion":"encender", "intensidad":100}'
 
 cambiar a modo automatico: curl -X POST http://localhost:3000/modo -H "Content-Type: application/json" -d '{"automatico": true}'
 
 modo manual: curl -X POST http://localhost:3000/modo -H "Content-Type: application/json" -d '{"automatico": false}'
+
+codigos para probar aire:
+mosquitto_pub -t eoffice/aire/actuador -m '{"accion":"encender"}'
+mosquitto_pub -t eoffice/aire/actuador -m '{"accion":"ajustar", "temperatura":27}'
+
+
+audio codigo pa probar:
+# Encender audio
+mosquitto_pub -h 127.0.0.1 -t "eoffice/audio/actuador" -m '{"accion":"encender"}'
+
+# Apagar audio
+mosquitto_pub -h 127.0.0.1 -t "eoffice/audio/actuador" -m '{"accion":"apagar"}'
+
+# Pausar audio
+mosquitto_pub -h 127.0.0.1 -t "eoffice/audio/actuador" -m '{"accion":"pausar"}'
+
+# Reanudar audio
+mosquitto_pub -h 127.0.0.1 -t "eoffice/audio/actuador" -m '{"accion":"reanudar"}'
+
+# Ajustar volumen a 70%
+mosquitto_pub -h 127.0.0.1 -t "eoffice/audio/actuador" -m '{"accion":"ajustar","volumen":70}'
+
+# Subir volumen (incremento de 10)
+mosquitto_pub -h 127.0.0.1 -t "eoffice/audio/actuador" -m '{"accion":"subir_volumen"}'
+
+# Bajar volumen (decremento de 10)
+mosquitto_pub -h 127.0.0.1 -t "eoffice/audio/actuador" -m '{"accion":"bajar_volumen"}'
+
+# Siguiente canción
+mosquitto_pub -h 127.0.0.1 -t "eoffice/audio/actuador" -m '{"accion":"siguiente"}'
