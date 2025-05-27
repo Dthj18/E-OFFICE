@@ -108,3 +108,8 @@ mosquitto_pub -h 127.0.0.1 -t "eoffice/audio/actuador" -m '{"accion":"bajar_volu
 
 # Siguiente canción
 mosquitto_pub -h 127.0.0.1 -t "eoffice/audio/actuador" -m '{"accion":"siguiente"}'
+
+
+mesnaje para limpiar el modo: mosquitto_pub -h 127.0.0.1 -t eoffice/modo -r -n
+
+modificar temperatura manueal: mosquitto_pub -h 127.0.0.1 -p 1883 -t eoffice/temperatura/ajustar -m '{"temperatura": 30}'

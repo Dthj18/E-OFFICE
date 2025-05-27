@@ -16,18 +16,18 @@ function actualizarTemperatura() {
 
     if (aireEncendido && temperaturaObjetivo !== null) {
         const diferencia = temperaturaObjetivo - temperaturaAmbiente;
-        const enfriamiento = Math.sign(diferencia) * Math.min(0.4, Math.abs(diferencia));
+        const enfriamiento = Math.sign(diferencia) * Math.min(0.3, Math.abs(diferencia) * 0.2);
         temperaturaAmbiente += enfriamiento + variacionNatural;
     } else {
-        if (temperaturaAmbiente < 17) {
-            const subida = 0.2 + Math.random() * 0.2;
+        if (temperaturaAmbiente < 24) {
+            const subida = 0.05 + Math.random() * 0.1;
             temperaturaAmbiente += subida + variacionNatural;
         } else {
             temperaturaAmbiente += variacionNatural;
         }
     }
 
-    temperaturaAmbiente = Math.max(10, Math.min(40, temperaturaAmbiente));
+    temperaturaAmbiente = Math.max(15, Math.min(40, temperaturaAmbiente));
 }
 
 client.on("connect", () => {
@@ -53,15 +53,13 @@ client.on("message", (topic, message) => {
         if (data.estado === "encendido") {
             aireEncendido = true;
             temperaturaObjetivo = parseFloat(data.temperatura);
-            temperaturaAmbiente = temperaturaAmbiente - 3;
-            console.log(`❄️ Aire encendido. Temperatura objetivo: ${temperaturaObjetivo}°C. Temperatura ambiente ajustada a: ${temperaturaAmbiente.toFixed(2)}°C`);
+            console.log(`❄️ Aire encendido. Temperatura objetivo: ${temperaturaObjetivo}°C`);
         } else if (data.estado === "apagado") {
             aireEncendido = false;
-            temperaturaAmbiente = temperaturaAmbiente + 3;
             temperaturaObjetivo = null;
-            console.log(`🔴 Aire apagado. Temperatura ambiente ajustada a: ${temperaturaAmbiente.toFixed(2)}°C`);
+            console.log(`🔴 Aire apagado.`);
         } else {
-            console.log(`⚠️ Estado del aire desconocido o sin acción: ${JSON.stringify(data)}`);
+            console.log(`⚠️ Estado del aire desconocido: ${JSON.stringify(data)}`);
         }
 
     } else if (topic === TOPIC_AJUSTAR_TEMP) {
@@ -71,10 +69,10 @@ client.on("message", (topic, message) => {
                 temperaturaAmbiente = parseFloat(payload.temperatura);
                 console.log(`✏️ Temperatura ambiente ajustada manualmente a: ${temperaturaAmbiente}°C`);
             } else {
-                console.log("⚠️ Mensaje para ajustar temperatura sin propiedad 'temperatura'");
+                console.log("⚠️ Mensaje sin propiedad 'temperatura'");
             }
         } catch (err) {
-            console.error("⚠️ Error al parsear mensaje para ajustar temperatura:", err.message);
+            console.error("⚠️ Error al parsear mensaje:", err.message);
         }
     }
 });

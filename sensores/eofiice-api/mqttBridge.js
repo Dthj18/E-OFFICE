@@ -22,6 +22,11 @@ client.on('message', (topic, message) => {
       const estado = JSON.parse(message.toString());
       aireEncendido = estado.estado === 'encendido';
       console.log(`🔄 Estado del aire: ${estado.estado}`);
+
+      if (modoActual === 'automatico') {
+        client.publish('eoffice/aire/estado/automatico', JSON.stringify(estado));
+      }
+
     } catch (e) {
       console.error('⚠️ Error al parsear estado del aire:', e);
     }
