@@ -132,5 +132,9 @@ modificar temperatura manual: mosquitto_pub -h 127.0.0.1 -p 1883 -t eoffice/temp
 Publicar lux desde el sensor de luz: mosquitto_pub -h 127.0.0.1 -t eoffice/luz/sensor -m '{"lux": 280}'
 
 
+abrir persiana: mosquitto_pub -h 127.0.0.1 -t eoffice/persianas/actuador -m '{"persiana": 1, "accion": "abrir"}'
+
+abrir ventana: mosquitto_pub -h 127.0.0.1 -t eoffice/ventanas/actuador -m '{"ventana": 2, "accion": "abrir"}'
+
 
 

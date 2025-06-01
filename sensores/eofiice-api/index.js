@@ -1,4 +1,4 @@
-require('dotenv').config(); // Carga variables del .env
+require('dotenv').config(); 
 const express = require("express");
 const bodyParser = require("body-parser");
 const cors = require("cors");
@@ -11,13 +11,11 @@ const accionesRoutes = require('./routes/accionesRoutes');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// ✅ Middlewares para procesar JSON y formularios
 app.use(cors());
-app.use(express.json()); // ✅ Recomendado en lugar de bodyParser.json()
-app.use(express.urlencoded({ extended: true })); // ✅ Para leer datos tipo form
+app.use(express.json()); 
+app.use(express.urlencoded({ extended: true }));
 app.use('/api', accionesRoutes);
 
-// Rutas MQTT
 app.post("/modo", (req, res) => {
   const { modo } = req.body;
 
@@ -36,10 +34,8 @@ app.post("/modo", (req, res) => {
   res.json({ mensaje: `Modo actualizado a ${modoValido}` });
 });
 
-// Rutas de usuarios (registro, login)
 app.use("/api/users", userRoutes);
 
-// Conectar a base de datos y arrancar el servidor
 sequelize.authenticate()
   .then(() => {
     console.log("✅ Conectado a PostgreSQL");
