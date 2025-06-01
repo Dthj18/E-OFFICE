@@ -42,7 +42,6 @@ client.on("message", (topic, message) => {
 
     if (topic === ESTADO_PERSIANAS_TOPIC && data.persianas) {
         persianas = { ...persianas, ...data.persianas };
-        console.log(`🪟 Estado actualizado: ${JSON.stringify(persianas)}`);
     }
 
     if (topic === ESTADO_LUCES_TOPIC) {

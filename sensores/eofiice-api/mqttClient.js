@@ -1,5 +1,5 @@
 const mqtt = require("mqtt");
-const { registrarSensor, registrarAccion } = require("./db");
+const { registrarSensor, registrarAccion } = require("./config/db");
 
 const MQTT_BROKER = "mqtt://127.0.0.1";
 const client = mqtt.connect(MQTT_BROKER);
@@ -14,7 +14,7 @@ const TOPIC_ACTUADOR_PERSIANAS = "eoffice/persianas/actuador";
 const TOPIC_ACTUADOR_AUDIO = "eoffice/audio/actuador";
 const TOPIC_ACTUADOR_VENTANAS = "eoffice/ventanas/actuador";
 
-const TOPIC_MODO = "eoffice/modo"; 
+const TOPIC_MODO = "eoffice/modo";
 
 let modoActual = "manual";
 
@@ -23,7 +23,7 @@ function setModo(valor) {
   if (modoActual !== nuevoModo) {
     modoActual = nuevoModo;
     console.log(`🔃 Modo actualizado: ${nuevoModo}`);
-    registrarAccion("sistema", `cambio de modo a ${nuevoModo}`);
+    registrarAccion("sistema", `cambio de modo a ${nuevoModo}`, "Sistema", "sistema@eoffice.com");
 
     client.publish(TOPIC_MODO, nuevoModo, { qos: 1, retain: true });
   }
@@ -49,7 +49,7 @@ client.on("connect", () => {
     TOPIC_ACTUADOR_PERSIANAS,
     TOPIC_ACTUADOR_AUDIO,
     TOPIC_ACTUADOR_VENTANAS,
-    TOPIC_MODO 
+    TOPIC_MODO,
   ]);
 
   client.publish(TOPIC_MODO, modoActual, { qos: 1, retain: true });
@@ -63,58 +63,65 @@ client.on("message", async (topic, message) => {
 
     switch (topic) {
       case TOPIC_SENSOR_TEMP:
-        if (payload.temperatura !== undefined) {
-          console.log(`🌡️ Temperatura: ${payload.temperatura}°C`);
+        if (payload?.temperatura !== undefined) {
           await registrarSensor("temperatura", payload.temperatura);
         }
         break;
 
       case TOPIC_SENSOR_LUZ:
-        if (payload.lux !== undefined) {
-          console.log(`🔆 Luz: ${payload.lux} lux`);
+        if (payload?.lux !== undefined) {
           await registrarSensor("luz", payload.lux);
         }
         break;
 
       case TOPIC_SENSOR_RUIDO:
-        if (payload.ruido !== undefined) {
-          console.log(`🔊 Ruido: ${payload.ruido} dB`);
+        if (payload?.ruido !== undefined) {
           await registrarSensor("ruido", payload.ruido);
         }
         break;
 
       case TOPIC_ACTUADOR_AIRE:
-        if (payload.accion) {
+        if (payload?.accion) {
+          const nombre = payload.nombre || "Actuador Aire";
+          const correo = payload.correo || "actuador-aire@eoffice.com";
           console.log(`💨 Acción aire: ${payload.accion}`);
-          await registrarAccion("aire", payload.accion);
+          await registrarAccion("aire", payload.accion, nombre, correo);
         }
         break;
 
       case TOPIC_ACTUADOR_LUCES:
-        if (payload.accion) {
+        if (payload?.accion) {
+          const nombre = payload.nombre || "Actuador Luces";
+          const correo = payload.correo || "actuador-luces@eoffice.com";
           console.log(`💡 Acción luces: ${payload.accion}`);
-          await registrarAccion("luces", payload.accion);
+          await registrarAccion("luces", payload.accion, nombre, correo);
         }
         break;
 
       case TOPIC_ACTUADOR_PERSIANAS:
-        if (payload.accion) {
+        if (payload?.accion) {
+          const nombre = payload.nombre || "Actuador Persianas";
+          const correo = payload.correo || "actuador-persianas@eoffice.com";
           console.log(`🪟 Acción persianas: ${payload.accion}`);
-          await registrarAccion("persianas", payload.accion);
+          await registrarAccion("persianas", payload.accion, nombre, correo);
         }
         break;
 
       case TOPIC_ACTUADOR_AUDIO:
-        if (payload.accion) {
+        if (payload?.accion) {
+          const nombre = payload.nombre || "Actuador Audio";
+          const correo = payload.correo || "actuador-audio@eoffice.com";
           console.log(`🔊 Acción audio: ${payload.accion}`);
-          await registrarAccion("audio", payload.accion);
+          await registrarAccion("audio", payload.accion, nombre, correo);
         }
         break;
 
       case TOPIC_ACTUADOR_VENTANAS:
-        if (payload.accion) {
+        if (payload?.accion) {
+          const nombre = payload.nombre || "Actuador Ventanas";
+          const correo = payload.correo || "actuador-ventanas@eoffice.com";
           console.log(`🪟 Acción ventanas: ${payload.accion}`);
-          await registrarAccion("ventanas", payload.accion);
+          await registrarAccion("ventanas", payload.accion, nombre, correo);
         }
         break;
 
@@ -123,7 +130,7 @@ client.on("message", async (topic, message) => {
         if (modoActual !== nuevoModo) {
           modoActual = nuevoModo;
           console.log(`🎛️ Modo cambiado externamente a: ${nuevoModo}`);
-          await registrarAccion("sistema", `modo actualizado a ${nuevoModo}`);
+          await registrarAccion("sistema", `modo actualizado a ${nuevoModo}`, "Sistema", "sistema@eoffice.com");
         }
         break;
     }
@@ -136,5 +143,7 @@ module.exports = {
   client,
   setModo,
   getModo,
-  esModoAutomatico
+  esModoAutomatico,
 };
+
+

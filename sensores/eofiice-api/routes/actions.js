@@ -9,14 +9,14 @@ router.get("/", async (req, res) => {
   const params = [];
   let where = "";
   if (topic) {
-    where = "WHERE topic = $1";
+where = "WHERE subsistema = $1";
     params.push(topic);
   }
   const sql = `
     SELECT * 
-      FROM acciones 
+      FROM registro_acciones
     ${where} 
-    ORDER BY ts DESC 
+    ORDER BY ts DESC s
     LIMIT $${params.length + 1}`;
   params.push(parseInt(limit));
   const { rows } = await pool.query(sql, params);

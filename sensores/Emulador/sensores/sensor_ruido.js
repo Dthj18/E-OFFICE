@@ -4,17 +4,15 @@ const BROKER_IP = "127.0.0.1";
 const client = mqtt.connect(`mqtt://${BROKER_IP}:1883`);
 
 const SENSOR_TOPIC = "eoffice/ruido/sensor";
-const ACTUATOR_TOPIC = "eoffice/audio/actuador";
+const ESTADO_AUDIO_TOPIC = "eoffice/audio/estado";
 
 let volumenActual = 0;
 let audioEncendido = false;
 let audioPausado = false;
 let cancionActual = "silencio";
-let publicadorRuido = null;
-let cambiadorCanciones = null;
 
 const canciones = {
-  silencio: { min: 20, max: 30 },
+  silencio: { min: 8, max: 15 },
   balada: { min: 30, max: 50 },
   rock: { min: 50, max: 70 },
   electronica: { min: 65, max: 85 },
@@ -22,88 +20,67 @@ const canciones = {
 };
 
 const listaCanciones = Object.keys(canciones);
+let intervaloRuido = null;
 
-function getRandomDecibels(cancion) {
+function getRandomDecibels(cancion, volumen) {
   const rango = canciones[cancion] || canciones["silencio"];
   let ruidoBase = Math.floor(Math.random() * (rango.max - rango.min) + rango.min);
-
-  if (volumenActual > 0) {
-    ruidoBase = Math.floor(ruidoBase * (volumenActual / 100));
-  } else {
-    ruidoBase = Math.floor(Math.random() * (30 - 20) + 20); 
-  }
-
-  return ruidoBase;
+  return Math.floor(ruidoBase * (volumen / 100));
 }
 
-client.on("connect", () => {
-  client.subscribe(ACTUATOR_TOPIC);
-});
+function publicarRuido() {
+  let cancion = audioEncendido && !audioPausado ? cancionActual : "silencio";
+  let volumen = audioEncendido && !audioPausado ? volumenActual : 0; // volumen = 0 si está apagado
+  let ruido = getRandomDecibels(cancion, volumen);
 
-client.on("message", (topic, message) => {
-  if (topic !== ACTUATOR_TOPIC) return;
-  const data = JSON.parse(message.toString());
-
-  if (data.accion === "encender") {
-    encenderAudio();
-  } else if (data.accion === "pausar") {
-    audioPausado = true;
-  } else if (data.accion === "reanudar") {
-    if (audioEncendido) audioPausado = false;
-  } else if (data.accion === "apagar") {
-    apagarAudio();
-  } else if (data.accion === "ajustar" && typeof data.volumen === "number") {
-    volumenActual = data.volumen;
-  } else if (data.accion === "siguiente") {
-    pasarASiguienteCancion();
-  }
-});
-
-function encenderAudio() {
-  if (audioEncendido) return;
-
-  audioEncendido = true;
-  audioPausado = false;
-  volumenActual = 50;
-  cancionActual = "balada";
-
-  publicadorRuido = setInterval(() => {
-    if (!audioEncendido || audioPausado) return;
-    const ruido = getRandomDecibels(cancionActual);
-    client.publish(SENSOR_TOPIC, JSON.stringify({ ruido, cancion: cancionActual }));
-  }, 4000);
-
-  cambiadorCanciones = setInterval(() => {
-    cambiarCancionAleatoria();
-  }, 20000);
-}
-
-function apagarAudio() {
-  if (!audioEncendido) return;
-
-  audioEncendido = false;
-  volumenActual = 0;
-  cancionActual = "silencio";
-
-  clearInterval(publicadorRuido);
-  clearInterval(cambiadorCanciones);
-  publicadorRuido = null;
-  cambiadorCanciones = null;
+  console.log(`📢 Publicando ruido: ${ruido} dB | Canción: ${cancion} | Volumen: ${volumen}%`);
+  client.publish(SENSOR_TOPIC, JSON.stringify({ ruido, cancion }));
 }
 
 function cambiarCancionAleatoria() {
   if (!audioEncendido || audioPausado) return;
-
   const nueva = listaCanciones[Math.floor(Math.random() * listaCanciones.length)];
-  if (nueva !== cancionActual) {
+  if (nueva !== cancionActual && nueva !== "silencio") {
     cancionActual = nueva;
+    console.log(`🎶 Nueva canción seleccionada: ${cancionActual}`);
   }
 }
 
-function pasarASiguienteCancion() {
-  if (!audioEncendido || audioPausado) return;
+client.on("connect", () => {
+  console.log("📡 Sensor de ruido conectado al broker MQTT");
+  client.subscribe(ESTADO_AUDIO_TOPIC);
 
-  const actual = listaCanciones.indexOf(cancionActual);
-  const siguiente = (actual + 1) % listaCanciones.length;
-  cancionActual = listaCanciones[siguiente];
-}
+  intervaloRuido = setInterval(() => {
+    publicarRuido();
+  }, 4000);
+
+  setInterval(() => {
+    cambiarCancionAleatoria();
+  }, 20000);
+});
+
+client.on("message", (topic, message) => {
+  if (topic === ESTADO_AUDIO_TOPIC) {
+    try {
+      const estado = JSON.parse(message.toString());
+      audioEncendido = estado.encendido;
+      audioPausado = estado.pausado;
+      volumenActual = estado.volumen || 0;
+
+      console.log("🎧 Estado de audio recibido:", estado);
+
+      if (audioEncendido && !audioPausado) {
+        if (cancionActual === "silencio") {
+          const nueva = listaCanciones[Math.floor(Math.random() * listaCanciones.length)];
+          if (nueva !== "silencio") {
+            cancionActual = nueva;
+            console.log(`🎶 Canción reproducida inmediatamente al encender: ${cancionActual}`);
+          }
+        }
+      }
+
+    } catch (err) {
+      console.error("❌ Error al parsear estado de audio:", err);
+    }
+  }
+});

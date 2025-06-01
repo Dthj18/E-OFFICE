@@ -4,7 +4,7 @@ const BROKER_IP = "127.0.0.1";
 const client = mqtt.connect(`mqtt://${BROKER_IP}:1883`);
 
 const TOPIC_AUDIO = "eoffice/audio/actuador";
-const TOPIC_ESTADO = "eoffice/audio/estado"; 
+const TOPIC_ESTADO = "eoffice/audio/estado";
 
 let audioEncendido = false;
 let audioPausado = false;
@@ -27,52 +27,56 @@ client.on("connect", () => {
 
 client.on("message", (topic, message) => {
   const data = JSON.parse(message.toString());
-  console.log(`🔊 Comando recibido: ${JSON.stringify(data)}`);
+  console.log(`🎵 Comando recibido: ${JSON.stringify(data)}`);
 
-  if (data.accion === "encender") {
-    if (!audioEncendido) {
-      audioEncendido = true;
-      audioPausado = false;
-      volumenActual = 50;
-      console.log("🔊 Audio encendido.");
-    }
-  } else if (data.accion === "apagar") {
-    if (audioEncendido) {
-      audioEncendido = false;
-      audioPausado = false;
-      volumenActual = 0;
-      console.log("🔇 Audio apagado.");
-    }
-  } else if (data.accion === "pausar") {
-    if (audioEncendido && !audioPausado) {
-      audioPausado = true;
-      console.log("⏸️ Audio pausado.");
-    }
-  } else if (data.accion === "reanudar") {
-    if (audioEncendido && audioPausado) {
-      audioPausado = false;
-      console.log("▶️ Audio reanudado.");
-    }
-  } else if (data.accion === "ajustar" && typeof data.volumen === "number") {
-    if (audioEncendido && !audioPausado) {
-      volumenActual = Math.max(0, Math.min(100, data.volumen));
+  let estadoCambiado = false;
+
+  if (data.accion === "encender" && !audioEncendido) {
+    audioEncendido = true;
+    audioPausado = false;
+    volumenActual = 50;
+    estadoCambiado = true;
+    console.log("🔊 Audio encendido.");
+  } else if (data.accion === "apagar" && audioEncendido) {
+    audioEncendido = false;
+    audioPausado = false;
+    volumenActual = 0;
+    estadoCambiado = true;
+    console.log("🔇 Audio apagado.");
+  } else if (data.accion === "pausar" && audioEncendido && !audioPausado) {
+    audioPausado = true;
+    estadoCambiado = true;
+    console.log("⏸️ Audio pausado.");
+  } else if (data.accion === "reanudar" && audioEncendido && audioPausado) {
+    audioPausado = false;
+    estadoCambiado = true;
+    console.log("▶️ Audio reanudado.");
+  } else if (data.accion === "ajustar" && typeof data.volumen === "number" && audioEncendido) {
+    const nuevoVolumen = Math.max(0, Math.min(100, data.volumen));
+    if (nuevoVolumen !== volumenActual) {
+      volumenActual = nuevoVolumen;
+      estadoCambiado = true;
       console.log(`🎚️ Volumen ajustado a ${volumenActual}%.`);
     }
-  } else if (data.accion === "subir_volumen") {
-    if (audioEncendido && !audioPausado) {
+  } else if (data.accion === "subir_volumen" && audioEncendido) {
+    if (volumenActual < 100) {
       volumenActual = Math.min(100, volumenActual + 10);
+      estadoCambiado = true;
       console.log(`🔊 Subiendo volumen a ${volumenActual}%.`);
     }
-  } else if (data.accion === "bajar_volumen") {
-    if (audioEncendido && !audioPausado) {
+  } else if (data.accion === "bajar_volumen" && audioEncendido) {
+    if (volumenActual > 0) {
       volumenActual = Math.max(0, volumenActual - 10);
+      estadoCambiado = true;
       console.log(`🔉 Bajando volumen a ${volumenActual}%.`);
     }
   } else if (data.accion === "siguiente") {
-    console.log("⏭️ Pasar a siguiente canción solicitado.");
+    console.log("⏭️ Siguiente canción solicitada (sensor cambiará automáticamente).");
   } else {
-    console.log("⚠️ Comando no reconocido.");
+    console.log("⚠️ Comando no reconocido o no aplicable.");
   }
 
-  publicarEstado();
+  if (estadoCambiado) {
+    publicarEstado();
+  }
 });

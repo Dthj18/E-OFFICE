@@ -4,12 +4,15 @@ const client = mqtt.connect('mqtt://127.0.0.1:1883');
 let modoActual = 'manual';
 let temperaturaActual = 0;
 let aireEncendido = false;
+let luxActual = 0;
 
 client.on('connect', () => {
   console.log('🔌 Puente MQTT conectado al broker');
   client.subscribe('eoffice/modo');
   client.subscribe('eoffice/temperatura/sensor');
-  client.subscribe('eoffice/aire/estado'); 
+  client.subscribe('eoffice/aire/estado');
+  client.subscribe('eoffice/luz/sensor');
+  client.subscribe('eoffice/ruido/sensor'); 
 });
 
 client.on('message', (topic, message) => {
@@ -35,6 +38,7 @@ client.on('message', (topic, message) => {
     try {
       const payload = JSON.parse(message.toString());
       temperaturaActual = parseFloat(payload.temperatura);
+
       if (modoActual === 'automatico') {
         client.publish('eoffice/temperatura/mode_automatico', JSON.stringify({
           temperatura: temperaturaActual
@@ -43,6 +47,38 @@ client.on('message', (topic, message) => {
 
     } catch (e) {
       console.error('⚠️ Error al parsear temperatura:', e);
+    }
+
+  } else if (topic === 'eoffice/luz/sensor') {
+    try {
+      const payload = JSON.parse(message.toString());
+      luxActual = parseFloat(payload.lux);
+
+      if (modoActual === 'automatico') {
+        client.publish('eoffice/luz/mode_automatico', JSON.stringify({
+          lux: luxActual
+        }));
+      }
+
+    } catch (e) {
+      console.error('⚠️ Error al parsear lux:', e);
+    }
+
+  } else if (topic === 'eoffice/ruido/sensor') {
+    try {
+      const payload = JSON.parse(message.toString());
+      const ruidoActual = parseFloat(payload.ruido);
+      const cancion = payload.cancion || '';
+
+      if (modoActual === 'automatico') {
+        client.publish('eoffice/ruido/sensor/automatico', JSON.stringify({
+          ruido: ruidoActual,
+          cancion: cancion
+        }));
+      }
+
+    } catch (e) {
+      console.error('⚠️ Error al parsear ruido:', e);
     }
   }
 });
